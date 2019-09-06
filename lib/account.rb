@@ -18,6 +18,7 @@ class Account < Browser
     @accounts = { accounts: @accounts }
 
     puts @accounts.to_json
+    @browser.close
   end
 
   def transactions_quantity_collect(iban)
