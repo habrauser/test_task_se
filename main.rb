@@ -9,7 +9,9 @@ require_relative 'lib/transaction'
 @headless = false
 @open = 'https://my.fibank.bg/oauth2-server/login?client_id=E_BANK'
 
-
+@account = Account.new(@browser, @headless)
+@account.open(@open)
+@account.collect
 
 @transactions = Transaction.new(@browser, @headless)
 @transactions.open(@open)
