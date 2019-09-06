@@ -1,8 +1,4 @@
-require_relative 'require'
-
 class Account
-
-  include RequireDependencies
 
   def initialize(browser, headless)
     @browser = Watir::Browser.new browser, headless: headless
@@ -11,47 +7,55 @@ class Account
   def open(goto)
 
     @browser.goto goto
+    @browser.link(id: 'demo-link').click
+    @browser.link(href: '/EBank/accounts').click
 
   end
 
   def collect
-    @browser.link(id: 'demo-link').click
-    @browser.link(href: '/EBank/accounts').click
 
-    sleep(1)
+    sleep(0.2)
 
-    @accounts = []
+    @ibans = []
     divs = @browser.divs(class: %w[display-inl-block bg-circle-acc])
     divs.each do |div|
-      @accounts << div.link.text
+      @ibans << div.link.text
     end
-    @arr = []
-    @accounts.each do |account_link|
-      @browser.link(href: '/EBank/accounts/details/' + account_link).click
 
-      sleep(2)
+    @accounts = []
 
-      @arr << @browser.h4(:css, 'h4[ng-bind="model.acc.acDesc"]').text # name
-      @arr << @browser.dd(index: 1).text # currency
-      @arr << @browser.h3(class: %w[blue-txt ng-binding ng-scope]).text # balance
-      @arr << @browser.dd(index: 3).text # nature
+    account_data_collect(@ibans)
 
-      sleep(1)
+    @hash = {accounts: @accounts}
 
-      # transactions
-      @browser.link(href: '/EBank/accounts/statement/' + account_link).click
-      @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.strftime('%d/%m/') + '2010')
-      @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
+    puts @hash.to_json
 
-      @arr << @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).text # transactions quantity
-      sleep(0.5)
+  end
 
+  def account_data_collect(ibans)
+    ibans.each do |iban|
+      @browser.link(href: '/EBank/accounts/details/' + iban).click
+      sleep(0.2)
+
+      @accounts << {
+          name: @browser.h4(:css, 'h4[ng-bind="model.acc.acDesc"]').text,
+          currency: @browser.dd(index: 1).text,
+          balance: @browser.h3(class: %w[blue-txt ng-binding ng-scope]).text.gsub(/\s+/, '').to_f,
+          nature: @browser.dd(index: 3).text,
+          transactions: transactions_quantity_collect(iban)
+      }
+      sleep(0.2)
       @browser.link(href: '/EBank/accounts').click
-
     end
 
-    puts @arr
+  end
 
+  def transactions_quantity_collect(iban)
+    sleep(0.2)
+    @browser.link(href: '/EBank/accounts/statement/' + iban).click
+    @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.strftime('%d/%m/') + '2010')
+    @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
+    @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).text
   end
 
 
