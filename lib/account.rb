@@ -18,15 +18,7 @@ class Account < Browser
     @accounts = { accounts: @accounts }
 
     puts @accounts.to_json
-    @browser.close
-  end
 
-  def transactions_quantity_collect(iban)
-    sleep(0.2)
-    @browser.link(href: '/EBank/accounts/statement/' + iban).click
-    @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.strftime('%d/%m/') + '2010')
-    @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
-    @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).text
   end
 
   private
@@ -34,6 +26,7 @@ class Account < Browser
   def account_data_collect(ibans)
     ibans.each do |iban|
       @browser.link(href: '/EBank/accounts/details/' + iban).click
+
       sleep(0.2)
 
       @accounts << {
@@ -41,10 +34,48 @@ class Account < Browser
           balance: @browser.h3(class: %w[blue-txt ng-binding ng-scope]).text.gsub(/\s+/, '').to_f,
           currency: @browser.dd(index: 1).text,
           nature: @browser.dd(index: 3).text,
-          transactions_quantity: transactions_quantity_collect(iban).to_i
+          transactions_quantity: transactions_quantity_collect(iban).to_i,
+          transactions: transactions_data_collect
       }
       sleep(0.2)
       @browser.link(href: '/EBank/accounts').click
+    end
+  end
+
+  def transactions_quantity_collect(iban)
+    sleep(0.2)
+    @browser.link(href: '/EBank/accounts/statement/' + iban).click
+    @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.prev_month(2).strftime('%d/%m/%Y'))
+    sleep(0.2)
+    @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
+    sleep(0.2)
+
+    if @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).exist?
+      @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).text
+    else
+      0
+    end
+
+  end
+
+
+  def transactions_data_collect
+    @transactions = []
+    sleep(0.2)
+    if @browser.span(:css, 'span[translate="PAGES.COMMON.NO_ITEMS"]').exist?
+      @transactions << { info: 'There are no transactions on this account yet' }
+    else
+      @browser.table(:id, 'accountStatements').tbody.rows.each do |row|
+        sleep(0.2)
+        @transactions << {
+          date: row.cell(index: 0).text,
+          description: row.cell(index: 4).text,
+          amount: row.cell(index: 2).text.to_f.positive? ? row.cell(index: 2).text.to_f - (row.cell(index: 2).text.to_f * 2) : row.cell(index: 3).text.to_f,
+          currency: @browser.span(class: 'filter-option').text[23..25],
+          account_name: @browser.span(class: 'filter-option').text[29..]
+        }
+      end
+      @transactions
     end
   end
 
