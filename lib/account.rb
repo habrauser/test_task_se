@@ -25,13 +25,10 @@ class Account < Browser
 
   def account_data_collect(ibans)
     ibans.each do |iban|
-      sleep(0.2)
       @browser.a(href: '/EBank/accounts/details/' + iban).click
-
-      sleep(0.2)
-
+      sleep(3)
       @account_details = Nokogiri::HTML.parse(@browser.html)
-      sleep(0.2)
+
       @accounts << {
           name: @account_details.xpath('//h4[@ng-bind="model.acc.acDesc"]').text,
           balance: @account_details.xpath('//h3[@class="blue-txt ng-binding ng-scope"]').text.gsub(/\s+/, '').to_f,
@@ -40,20 +37,17 @@ class Account < Browser
           transactions_quantity: transactions_quantity_collect(iban).to_i,
           transactions: transactions_data_collect
       }
-      sleep(0.2)
       @browser.link(href: '/EBank/accounts').click
-      sleep(0.2)
+
     end
   end
 
   def transactions_quantity_collect(iban)
 
     @browser.link(href: '/EBank/accounts/statement/' + iban).click
-    sleep(0.2)
     @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.prev_month(2).strftime('%d/%m/%Y')) #Last 2 months
-    sleep(0.2)
     @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
-    sleep(0.2)
+    sleep(1)
     @transactions_page = Nokogiri::HTML.parse(@browser.html)
 
     if @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).exist?
@@ -68,7 +62,6 @@ class Account < Browser
   def transactions_data_collect
     @transactions = []
     @table = @transactions_page.xpath('//table[@id="accountStatements"]/tbody')
-    sleep(0.2)
     if @browser.span(:css, 'span[translate="PAGES.COMMON.NO_ITEMS"]').exist?
       @transactions << { info: 'There are no transactions on this account yet' }
     else
