@@ -3,14 +3,10 @@ require_relative '../lib/account'
 require_relative '../lib/browser'
 require_relative '../modules/require'
 
-RSpec.describe Account do
+@accounts = { account: [] }
 
-  let(:account) { Account.new(:firefox, true) }
-
-  it 'Getting JSON response' do
-    @accounts = { accounts: [] }
-    @account.to_json
-    expect(account.collect).to be @account
+describe 'collect' do
+  it "is equal to another string of the same value" do
+    expect(Account.new(:firefox, true).collect).to eq(@accounts)
   end
-
-end
+  end
