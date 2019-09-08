@@ -6,7 +6,7 @@ require_relative '../modules/require'
 @accounts = { account: [] }
 
 describe 'collect' do
-  it "is equal to another string of the same value" do
+  it 'Account data collects correct' do
     expect(Account.new(:firefox, true).collect).to eq(@accounts)
   end
   end
