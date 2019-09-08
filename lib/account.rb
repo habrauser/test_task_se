@@ -3,12 +3,12 @@ require_relative 'browser'
 class Account < Browser
 
   def collect
-    sleep(0.2)
 
     @ibans = []
-    divs = @browser.divs(class: %w[display-inl-block bg-circle-acc])
-    divs.each do |div|
-      @ibans << div.link.text
+
+    @accounts_page = Nokogiri::HTML.parse(@browser.html)
+    @accounts_page.xpath('//a[@class="s1"]/span[@class="ng-binding"]').each do |iban|
+      @ibans << iban.text
     end
 
     @accounts = []
@@ -25,30 +25,36 @@ class Account < Browser
 
   def account_data_collect(ibans)
     ibans.each do |iban|
-      @browser.link(href: '/EBank/accounts/details/' + iban).click
+      sleep(0.2)
+      @browser.a(href: '/EBank/accounts/details/' + iban).click
 
       sleep(0.2)
 
+      @account_details = Nokogiri::HTML.parse(@browser.html)
+      sleep(0.2)
       @accounts << {
-          name: @browser.h4(:css, 'h4[ng-bind="model.acc.acDesc"]').text,
-          balance: @browser.h3(class: %w[blue-txt ng-binding ng-scope]).text.gsub(/\s+/, '').to_f,
-          currency: @browser.dd(index: 1).text,
-          nature: @browser.dd(index: 3).text,
+          name: @account_details.xpath('//h4[@ng-bind="model.acc.acDesc"]').text,
+          balance: @account_details.xpath('//h3[@class="blue-txt ng-binding ng-scope"]').text.gsub(/\s+/, '').to_f,
+          currency: @account_details.xpath('//dd[@ng-bind="model.acc.ccy"]').text,
+          nature: @account_details.xpath('//dd[@ng-bind="model.custAcc.ibRoleId"]').text,
           transactions_quantity: transactions_quantity_collect(iban).to_i,
           transactions: transactions_data_collect
       }
       sleep(0.2)
       @browser.link(href: '/EBank/accounts').click
+      sleep(0.2)
     end
   end
 
   def transactions_quantity_collect(iban)
-    sleep(0.2)
+
     @browser.link(href: '/EBank/accounts/statement/' + iban).click
-    @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.prev_month(2).strftime('%d/%m/%Y'))
+    sleep(0.2)
+    @browser.text_field(class: 'form-control ng-isolate-scope').set(DateTime.now.prev_month(2).strftime('%d/%m/%Y')) #Last 2 months
     sleep(0.2)
     @browser.button(:css, 'button[translate="PAGES.ACCOUNT_STATEMENT.BUTTON"]').click
     sleep(0.2)
+    @transactions_page = Nokogiri::HTML.parse(@browser.html)
 
     if @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).exist?
       @browser.span(class: %w[blue-txt bold ng-binding ng-scope]).text
@@ -61,18 +67,18 @@ class Account < Browser
 
   def transactions_data_collect
     @transactions = []
+    @table = @transactions_page.xpath('//table[@id="accountStatements"]/tbody')
     sleep(0.2)
     if @browser.span(:css, 'span[translate="PAGES.COMMON.NO_ITEMS"]').exist?
       @transactions << { info: 'There are no transactions on this account yet' }
     else
-      @browser.table(:id, 'accountStatements').tbody.rows.each do |row|
-        sleep(0.2)
+      @table.xpath('//tr[@id="step1"]').each do |cell|
         @transactions << {
-          date: row.cell(index: 0).text,
-          description: row.cell(index: 4).text,
-          amount: row.cell(index: 2).text.to_f.positive? ? row.cell(index: 2).text.to_f - (row.cell(index: 2).text.to_f * 2) : row.cell(index: 3).text.to_f,
-          currency: @browser.span(class: 'filter-option').text[23..25],
-          account_name: @browser.span(class: 'filter-option').text[29..]
+          date: cell.css('td[1] > div > span').text,
+          description: cell.css('td[5] > div > span').text,
+          amount: cell.css('td[3] > div > span').text.to_f.positive? ? cell.css('td[3] > div > span').text.to_f - (cell.css('td[3] > div > span').text.to_f * 2) : cell.css('td[4] > div > span').text.to_f,
+          currency: @transactions_page.xpath('//span[@class="filter-option"]').first.text[24..26],
+          account_name: @transactions_page.xpath('//span[@class="filter-option"]').first.text[29..]
         }
       end
       @transactions

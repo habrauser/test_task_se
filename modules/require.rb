@@ -1,6 +1,8 @@
 module RequireDependencies
 
   require 'faker'
+  require 'nokogiri'
+  require 'open-uri'
   require 'watir'
   require 'webdrivers'
 
@@ -13,7 +15,7 @@ module RequireDependencies
   #Selenium::WebDriver::Chrome.driver_path='./drivers/chromedriver77'
 
   # Firefox Driver
-  #Selenium::WebDriver::Firefox.driver_path='./drivers/geckodriver'
+  Selenium::WebDriver::Firefox.driver_path='./drivers/geckodriver'
 
 
 end
